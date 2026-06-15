@@ -1,0 +1,16 @@
+{
+    "extends": "@tsconfig/node24/tsconfig.json",
+    "include": [
+        "server/**/*.ts",
+        "src/email/**/*.ts"
+    ],
+    "compilerOptions": {
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "noEmit": true,
+        "strict": true,
+        "types": [
+            "node"
+        ]
+    }
+}
