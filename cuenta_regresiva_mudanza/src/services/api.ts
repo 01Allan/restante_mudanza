@@ -5,7 +5,7 @@ import type {
 } from '@/stores/moveTasks'
 
 const TOKEN_KEY = 'cuenta-regresiva-mudanza:token'
-const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
+const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
 
 export function getToken() {
     return localStorage.getItem(TOKEN_KEY)
@@ -16,11 +16,6 @@ export function clearToken() {
 }
 
 export async function login(email: string, password: string) {
-    if (!apiUrl) {
-        localStorage.setItem(TOKEN_KEY, 'local-dev-token')
-        return
-    }
-
     const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST'
         ,headers: {
@@ -41,30 +36,14 @@ export async function login(email: string, password: string) {
 }
 
 export async function getTasksFromApi() {
-    if (!apiUrl) {
-        return null
-    }
-
     return request<MoveTask[]>('/tasks')
 }
 
 export async function getUsersFromApi() {
-    if (!apiUrl) {
-        return null
-    }
-
     return request<MoveUser[]>('/users')
 }
 
 export async function createUserInApi(user: Pick<MoveUser, 'email' | 'displayName' | 'role'>) {
-    if (!apiUrl) {
-        return {
-            id: crypto.randomUUID?.() ?? `user-${Date.now()}`
-            ,...user
-            ,active: true
-        }
-    }
-
     return request<MoveUser>('/users', {
         method: 'POST'
         ,body: JSON.stringify(user)
@@ -92,10 +71,6 @@ export async function deleteTaskInApi(id: string) {
 }
 
 async function request<T>(path: string, init: RequestInit = {}) {
-    if (!apiUrl) {
-        throw new Error('API is not configured')
-    }
-
     const headers = new Headers(init.headers)
     headers.set('Content-Type', 'application/json')
 

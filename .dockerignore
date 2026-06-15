@@ -1,0 +1,5 @@
+cuenta_regresiva_mudanza/node_modules
+cuenta_regresiva_mudanza/dist
+cuenta_regresiva_mudanza/.env
+.DS_Store
+*.log

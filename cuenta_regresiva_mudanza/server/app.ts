@@ -6,6 +6,7 @@ import { migrate } from './db.js'
 import { registerAuthRoutes } from './auth.js'
 import { registerTaskRoutes } from './tasks.js'
 import { registerUserRoutes } from './users.js'
+import { registerStaticRoutes } from './static.js'
 
 export async function createApp() {
     const app = Fastify({
@@ -27,6 +28,7 @@ export async function createApp() {
     await registerAuthRoutes(app)
     await registerUserRoutes(app)
     await registerTaskRoutes(app)
+    await registerStaticRoutes(app)
 
     return app
 }
