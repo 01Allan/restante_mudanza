@@ -19,6 +19,7 @@ import ProgressBar from './components/ProgressBar.vue'
 import TaskList from './components/TaskList.vue'
 import TaskModal from './components/TaskModal.vue'
 import UserModal from './components/UserModal.vue'
+import UserList from './components/UserList.vue'
 import { moveProject } from './domain/moveConfig'
 import {
     getCountdownParts
@@ -41,6 +42,7 @@ import {
     ,clearToken
     ,createTaskInApi
     ,createUserInApi
+    ,deleteUserInApi
     ,deleteTaskInApi
     ,getTasksFromApi
     ,getToken
@@ -58,6 +60,7 @@ const isAuthModalOpen = ref(false)
 const isChangePasswordModalOpen = ref(false)
 const authError = ref('')
 const changePasswordError = ref('')
+const userManagementError = ref('')
 const editingTask = ref<MoveTask | null>(null)
 const isTaskModalOpen = ref(false)
 const isUserModalOpen = ref(false)
@@ -180,12 +183,43 @@ async function saveNewPassword(currentPassword: string, newPassword: string) {
 }
 
 async function saveUser(user: Pick<MoveUser, 'email' | 'displayName' | 'role'>) {
-    const savedUser = await createUserInApi(user)
-    users.value = [
-        ...users.value.filter((item) => item.id !== savedUser.id)
-        ,savedUser
-    ].sort((left, right) => left.displayName.localeCompare(right.displayName))
-    isUserModalOpen.value = false
+    try {
+        const savedUser = await createUserInApi(user)
+        users.value = [
+            ...users.value.filter((item) => item.id !== savedUser.id)
+            ,savedUser
+        ].sort((left, right) => left.displayName.localeCompare(right.displayName))
+        userManagementError.value = ''
+        isUserModalOpen.value = false
+    } catch (error) {
+        userManagementError.value = error instanceof Error
+            ? error.message
+            : 'No se pudo guardar el usuario'
+    }
+}
+
+async function removeUser(id: string) {
+    const user = users.value.find((item) => item.id === id)
+
+    if (!user) {
+        return
+    }
+
+    const confirmed = window.confirm(`Borrar permanentemente a ${user.displayName}?`)
+
+    if (!confirmed) {
+        return
+    }
+
+    try {
+        await deleteUserInApi(id)
+        users.value = users.value.filter((item) => item.id !== id)
+        userManagementError.value = ''
+    } catch (error) {
+        userManagementError.value = error instanceof Error
+            ? error.message
+            : 'No se pudo borrar el usuario'
+    }
 }
 
 async function loadUsers() {
@@ -293,6 +327,10 @@ onUnmounted(() => {
                 </button>
             </header>
 
+            <p v-if="userManagementError" class="feedback-banner" role="alert">
+                {{ userManagementError }}
+            </p>
+
             <TaskList
                 :tasks="tasks"
                 :category-labels="moveProject.categories"
@@ -301,6 +339,12 @@ onUnmounted(() => {
                 @delete="removeTask"
                 @edit="openEditTaskModal"
                 @toggle="toggleTask"
+            />
+
+            <UserList
+                v-if="isAuthenticated"
+                :users="users"
+                @delete="removeUser"
             />
         </section>
 
@@ -535,6 +579,20 @@ h1 {
     color: #eafcff;
     background: rgba(124, 247, 255, 0.08);
     cursor: pointer;
+}
+
+.feedback-banner {
+    margin: -1rem 0 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(255, 154, 188, 0.28);
+    border-radius: 20px;
+    color: #ffd7e6;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+        rgba(58, 12, 34, 0.52);
+    box-shadow:
+        14px 14px 36px rgba(0, 0, 0, 0.24),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .bottom-nav {

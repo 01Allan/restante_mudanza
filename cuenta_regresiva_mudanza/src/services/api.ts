@@ -28,7 +28,7 @@ export async function login(email: string, password: string) {
     })
 
     if (!response.ok) {
-        throw new Error('Credenciales invalidas')
+        throw new Error(await getResponseError(response, 'Credenciales invalidas'))
     }
 
     const session = await response.json() as {
@@ -62,6 +62,12 @@ export async function createUserInApi(user: Pick<MoveUser, 'email' | 'displayNam
     return request<MoveUser>('/users', {
         method: 'POST'
         ,body: JSON.stringify(user)
+    })
+}
+
+export async function deleteUserInApi(id: string) {
+    await request<void>(`/users/${id}`, {
+        method: 'DELETE'
     })
 }
 
@@ -101,7 +107,7 @@ async function request<T>(path: string, init: RequestInit = {}) {
     })
 
     if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`)
+        throw new Error(await getResponseError(response, `API request failed: ${response.status}`))
     }
 
     if (response.status === 204) {
@@ -109,4 +115,16 @@ async function request<T>(path: string, init: RequestInit = {}) {
     }
 
     return await response.json() as T
+}
+
+async function getResponseError(response: Response, fallbackMessage: string) {
+    try {
+        const payload = await response.json() as {
+            message?: string
+        }
+
+        return payload.message?.trim() || fallbackMessage
+    } catch {
+        return fallbackMessage
+    }
 }

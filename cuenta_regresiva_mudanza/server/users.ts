@@ -25,6 +25,8 @@ const selectUsersSql = `
     order by display_name asc
 `
 
+const projectSlug = 'mudanza-2026'
+
 export async function registerUserRoutes(app: FastifyInstance) {
     app.get('/users', {
         preHandler: [app.authenticate]
@@ -75,6 +77,13 @@ export async function registerUserRoutes(app: FastifyInstance) {
             ]
         )
         const user = result.rows[0]
+
+        await syncRecipient({
+            userId: user.id
+            ,name: user.displayName
+            ,email: user.email
+            ,active: true
+        })
 
         await sendMail({
             to: [user.email]
@@ -132,6 +141,120 @@ export async function registerUserRoutes(app: FastifyInstance) {
             ]
         )
 
+        await syncRecipient({
+            userId: id
+            ,name: draft.displayName ?? user.display_name
+            ,email: draft.email ?? user.email
+            ,previousEmail: user.email
+            ,active: draft.active ?? user.active
+        })
+
         return result.rows[0]
     })
+
+    app.delete('/users/:id', {
+        preHandler: [app.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params as { id: string }
+
+        const current = await db.query(
+            `
+                select
+                    id
+                    ,role
+                from app_users
+                where id = $1
+            `
+            ,[id]
+        )
+
+        if (!current.rowCount) {
+            return reply.code(404).send({
+                message: 'User not found'
+            })
+        }
+
+        const user = current.rows[0]
+
+        if (user.role === 'admin') {
+            const admins = await db.query(
+                `
+                    select count(*)::int as total
+                    from app_users
+                    where role = 'admin'
+                `
+            )
+
+            if (admins.rows[0]?.total <= 1) {
+                return reply.code(400).send({
+                    message: 'Cannot delete the last admin user'
+                })
+            }
+        }
+
+        await db.query(
+            `
+                delete from move_recipients
+                where user_id = $1
+                    or email = (
+                        select email
+                        from app_users
+                        where id = $1
+                    )
+            `
+            ,[id]
+        )
+
+        await db.query('delete from app_users where id = $1', [id])
+
+        return reply.code(204).send()
+    })
+}
+
+async function syncRecipient(input: {
+    userId: string
+    ,name: string
+    ,email: string
+    ,previousEmail?: string
+    ,active: boolean
+}) {
+    if (input.previousEmail && input.previousEmail !== input.email) {
+        await db.query(
+            `
+                delete from move_recipients
+                where user_id = $1
+                    or email = $2
+            `
+            ,[
+                input.userId
+                ,input.previousEmail
+            ]
+        )
+    }
+
+    await db.query(
+        `
+            insert into move_recipients (project_id, user_id, name, email, active)
+            select
+                move_projects.id
+                ,$1
+                ,$2
+                ,$3
+                ,$4
+            from move_projects
+            where move_projects.slug = $5
+            on conflict (project_id, email)
+            do update set
+                user_id = excluded.user_id
+                ,name = excluded.name
+                ,active = excluded.active
+        `
+        ,[
+            input.userId
+            ,input.name
+            ,input.email
+            ,input.active
+            ,projectSlug
+        ]
+    )
 }
