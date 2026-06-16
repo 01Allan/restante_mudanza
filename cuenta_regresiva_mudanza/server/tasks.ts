@@ -24,7 +24,7 @@ const selectTasksSql = `
     join move_projects on move_projects.id = move_tasks.project_id
     left join app_users assignee on assignee.id = move_tasks.assignee_id
     where move_projects.slug = 'mudanza-2026'
-    order by sort_order asc, created_at asc
+    order by move_tasks.sort_order asc, move_tasks.created_at asc
 `
 
 export async function registerTaskRoutes(app: FastifyInstance) {
