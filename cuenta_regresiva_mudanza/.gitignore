@@ -37,3 +37,6 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Ignorar a todos los de .DS_Store y que no salgan en el stages
+.DS_Store
