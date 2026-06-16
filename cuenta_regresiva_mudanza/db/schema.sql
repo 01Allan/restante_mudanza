@@ -4,8 +4,12 @@ create table if not exists app_users (
     id uuid primary key default gen_random_uuid()
     ,email text not null unique
     ,display_name text not null
+    ,password_hash text
+    ,must_change_password boolean not null default true
     ,role text not null default 'admin' check (role in ('admin', 'member'))
     ,active boolean not null default true
+    ,invited_at timestamptz
+    ,last_login_at timestamptz
     ,created_at timestamptz not null default now()
     ,updated_at timestamptz not null default now()
 );
@@ -68,6 +72,16 @@ create table if not exists email_delivery_logs (
     ,error_message text
     ,created_at timestamptz not null default now()
 );
+
+alter table app_users add column if not exists password_hash text;
+alter table app_users add column if not exists must_change_password boolean not null default true;
+alter table app_users add column if not exists invited_at timestamptz;
+alter table app_users add column if not exists last_login_at timestamptz;
+alter table move_tasks add column if not exists created_by uuid references app_users(id) on delete set null;
+alter table move_tasks add column if not exists assignee_id uuid references app_users(id) on delete set null;
+alter table move_tasks add column if not exists updated_by uuid references app_users(id) on delete set null;
+alter table move_tasks add column if not exists completed_by uuid references app_users(id) on delete set null;
+alter table move_tasks add column if not exists completed_at timestamptz;
 
 create index if not exists idx_move_tasks_project_id on move_tasks(project_id);
 create index if not exists idx_move_tasks_category_id on move_tasks(category_id);

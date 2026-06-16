@@ -19,6 +19,7 @@ export interface MoveUser {
     ,displayName: string
     ,role: 'admin' | 'member'
     ,active: boolean
+    ,mustChangePassword: boolean
 }
 
 export type MoveTaskDraft = Pick<MoveTask, 'title' | 'detail' | 'category' | 'assigneeId'>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {
-    LogIn
+    Eye
+    ,EyeOff
+    ,LogIn
     ,X
 } from '@lucide/vue'
 import { ref } from 'vue'
@@ -15,8 +17,9 @@ const emit = defineEmits<{
     ,login: [email: string, password: string]
 }>()
 
-const email = ref('admin@mudanza.local')
-const password = ref('mudanza')
+const email = ref('')
+const password = ref('')
+const showPassword = ref(false)
 
 function submit() {
     emit('login', email.value, password.value)
@@ -41,7 +44,18 @@ function submit() {
 
                 <label>
                     <span>Password</span>
-                    <input v-model="password" type="password" autocomplete="current-password" required />
+                    <div class="password-field">
+                        <input
+                            v-model="password"
+                            :type="showPassword ? 'text' : 'password'"
+                            autocomplete="current-password"
+                            required
+                        />
+                        <button type="button" aria-label="Mostrar password" @click="showPassword = !showPassword">
+                            <EyeOff v-if="showPassword" :size="18" />
+                            <Eye v-else :size="18" />
+                        </button>
+                    </div>
                 </label>
 
                 <p v-if="error" class="error">{{ error }}</p>
@@ -112,6 +126,22 @@ input {
     border-radius: 18px;
     color: #eafcff;
     background: rgba(5, 12, 24, 0.66);
+}
+
+.password-field {
+    display: grid;
+    grid-template-columns: 1fr 2.75rem;
+    gap: 0.5rem;
+}
+
+.password-field button {
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(124, 247, 255, 0.28);
+    border-radius: 18px;
+    color: #eafcff;
+    background: rgba(124, 247, 255, 0.08);
+    cursor: pointer;
 }
 
 .error {

@@ -51,6 +51,10 @@ function saveUser() {
                     </button>
                 </div>
 
+                <p class="hint">
+                    Se enviara un password temporal al correo y debera cambiarlo al entrar.
+                </p>
+
                 <label>
                     <span>Nombre</span>
                     <input v-model="form.displayName" type="text" required />
@@ -114,6 +118,12 @@ function saveUser() {
 
 .modal h2 {
     margin: 0;
+}
+
+.hint {
+    margin: 0;
+    color: #b8d9df;
+    line-height: 1.5;
 }
 
 label {

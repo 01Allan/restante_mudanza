@@ -13,6 +13,7 @@ import {
     ,ref
 } from 'vue'
 import AuthModal from './components/AuthModal.vue'
+import ChangePasswordModal from './components/ChangePasswordModal.vue'
 import CountdownCard from './components/CountdownCard.vue'
 import ProgressBar from './components/ProgressBar.vue'
 import TaskList from './components/TaskList.vue'
@@ -36,7 +37,8 @@ import {
     ,type MoveUser
 } from './stores/moveTasks'
 import {
-    clearToken
+    changePassword
+    ,clearToken
     ,createTaskInApi
     ,createUserInApi
     ,deleteTaskInApi
@@ -53,7 +55,9 @@ const tasks = ref<MoveTask[]>(getStoredTasks())
 const users = ref<MoveUser[]>([])
 const isAuthenticated = ref(Boolean(getToken()))
 const isAuthModalOpen = ref(false)
+const isChangePasswordModalOpen = ref(false)
 const authError = ref('')
+const changePasswordError = ref('')
 const editingTask = ref<MoveTask | null>(null)
 const isTaskModalOpen = ref(false)
 const isUserModalOpen = ref(false)
@@ -146,15 +150,32 @@ function openAuth() {
 
 async function loginUser(email: string, password: string) {
     try {
-        await login(email, password)
+        const session = await login(email, password)
         isAuthenticated.value = true
         isAuthModalOpen.value = false
         authError.value = ''
+
+        if (session.mustChangePassword) {
+            isChangePasswordModalOpen.value = true
+        }
+
         await loadUsers()
     } catch (error) {
         authError.value = error instanceof Error
             ? error.message
             : 'No se pudo iniciar sesion'
+    }
+}
+
+async function saveNewPassword(currentPassword: string, newPassword: string) {
+    try {
+        await changePassword(currentPassword, newPassword)
+        changePasswordError.value = ''
+        isChangePasswordModalOpen.value = false
+    } catch (error) {
+        changePasswordError.value = error instanceof Error
+            ? error.message
+            : 'No se pudo cambiar el password'
     }
 }
 
@@ -303,6 +324,12 @@ onUnmounted(() => {
             :error="authError"
             @close="isAuthModalOpen = false"
             @login="loginUser"
+        />
+
+        <ChangePasswordModal
+            :open="isChangePasswordModalOpen"
+            :error="changePasswordError"
+            @save="saveNewPassword"
         />
 
         <nav class="bottom-nav" aria-label="Navegacion principal">

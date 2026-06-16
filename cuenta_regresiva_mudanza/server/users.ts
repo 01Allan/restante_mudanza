@@ -1,5 +1,11 @@
 import type { FastifyInstance } from 'fastify'
+import { config } from './config.js'
 import { db } from './db.js'
+import { sendMail } from './email.js'
+import {
+    createTemporaryPassword
+    ,hashPassword
+} from './password.js'
 
 interface UserDraft {
     email: string
@@ -14,6 +20,7 @@ const selectUsersSql = `
         ,display_name as "displayName"
         ,role
         ,active
+        ,must_change_password as "mustChangePassword"
     from app_users
     order by display_name asc
 `
@@ -30,15 +37,27 @@ export async function registerUserRoutes(app: FastifyInstance) {
         preHandler: [app.authenticate]
     }, async (request, reply) => {
         const draft = request.body as UserDraft
+
+        if (!config.smtp.host || !config.smtp.user || !config.smtp.pass) {
+            return reply.code(400).send({
+                message: 'SMTP is required to invite users'
+            })
+        }
+
+        const temporaryPassword = createTemporaryPassword()
+        const passwordHash = await hashPassword(temporaryPassword)
         const result = await db.query(
             `
-                insert into app_users (email, display_name, role)
-                values ($1, $2, $3)
+                insert into app_users (email, display_name, role, password_hash, must_change_password, invited_at)
+                values ($1, $2, $3, $4, true, now())
                 on conflict (email)
                 do update set
                     display_name = excluded.display_name
                     ,role = excluded.role
+                    ,password_hash = excluded.password_hash
+                    ,must_change_password = true
                     ,active = true
+                    ,invited_at = now()
                     ,updated_at = now()
                 returning
                     id
@@ -46,15 +65,30 @@ export async function registerUserRoutes(app: FastifyInstance) {
                     ,display_name as "displayName"
                     ,role
                     ,active
+                    ,must_change_password as "mustChangePassword"
             `
             ,[
                 draft.email
                 ,draft.displayName
                 ,draft.role
+                ,passwordHash
             ]
         )
+        const user = result.rows[0]
 
-        return reply.code(201).send(result.rows[0])
+        await sendMail({
+            to: [user.email]
+            ,subject: 'Acceso al tablero de mudanza'
+            ,html: `
+                <p>Hola ${user.displayName},</p>
+                <p>Te agregaron al tablero de mudanza.</p>
+                <p><strong>Usuario:</strong> ${user.email}</p>
+                <p><strong>Password temporal:</strong> ${temporaryPassword}</p>
+                <p>Al entrar, cambia tu password.</p>
+            `
+        })
+
+        return reply.code(201).send(user)
     })
 
     app.patch('/users/:id', {
@@ -87,6 +121,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
                     ,display_name as "displayName"
                     ,role
                     ,active
+                    ,must_change_password as "mustChangePassword"
             `
             ,[
                 id

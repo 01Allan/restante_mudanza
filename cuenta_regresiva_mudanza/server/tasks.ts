@@ -51,7 +51,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
                     where task_categories.code = $3
                 )
                 ,inserted as (
-                    insert into move_tasks (project_id, category_id, title, detail, assignee_id, sort_order)
+                    insert into move_tasks (project_id, category_id, title, detail, assignee_id, sort_order, created_by, updated_by)
                     select
                         project.id
                         ,category.id
@@ -63,6 +63,8 @@ export async function registerTaskRoutes(app: FastifyInstance) {
                             from move_tasks
                             where project_id = project.id
                         )
+                        ,$5
+                        ,$5
                     from project, category
                     returning id, title, detail, completed, category_id, assignee_id
                 )
@@ -83,6 +85,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
                 ,draft.detail ?? ''
                 ,draft.category
                 ,draft.assigneeId ?? null
+                ,request.currentUser?.id
             ]
         )
 
@@ -130,6 +133,8 @@ export async function registerTaskRoutes(app: FastifyInstance) {
                     ,category_id = (select id from category)
                     ,completed = $5
                     ,assignee_id = $6
+                    ,updated_by = $7
+                    ,completed_by = case when $5 then $7 else null end
                     ,completed_at = case when $5 then coalesce(completed_at, now()) else null end
                     ,updated_at = now()
                 where id = $1
@@ -154,6 +159,7 @@ export async function registerTaskRoutes(app: FastifyInstance) {
                 ,draft.category ?? task.category
                 ,draft.completed ?? task.completed
                 ,'assigneeId' in draft ? draft.assigneeId : task.assignee_id
+                ,request.currentUser?.id
             ]
         )
 

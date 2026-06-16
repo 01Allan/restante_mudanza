@@ -2,6 +2,7 @@ import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import Fastify from 'fastify'
 import { config } from './config.js'
+import { bootstrapAdmin } from './bootstrap.js'
 import { migrate } from './db.js'
 import { registerAuthRoutes } from './auth.js'
 import { registerTaskRoutes } from './tasks.js'
@@ -20,6 +21,7 @@ export async function createApp() {
         secret: config.jwtSecret
     })
     await migrate()
+    await bootstrapAdmin()
 
     app.get('/health', async () => ({
         ok: true

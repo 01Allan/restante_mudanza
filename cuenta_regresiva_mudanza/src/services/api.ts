@@ -31,8 +31,23 @@ export async function login(email: string, password: string) {
         throw new Error('Credenciales invalidas')
     }
 
-    const session = await response.json() as { token: string }
+    const session = await response.json() as {
+        token: string
+        ,mustChangePassword: boolean
+    }
     localStorage.setItem(TOKEN_KEY, session.token)
+
+    return session
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+    await request('/auth/change-password', {
+        method: 'POST'
+        ,body: JSON.stringify({
+            currentPassword
+            ,newPassword
+        })
+    })
 }
 
 export async function getTasksFromApi() {
