@@ -93,7 +93,11 @@ export async function deleteTaskInApi(id: string) {
 
 async function request<T>(path: string, init: RequestInit = {}) {
     const headers = new Headers(init.headers)
-    headers.set('Content-Type', 'application/json')
+    const hasJsonBody = typeof init.body === 'string' && init.body.length > 0
+
+    if (hasJsonBody) {
+        headers.set('Content-Type', 'application/json')
+    }
 
     const token = getToken()
 
